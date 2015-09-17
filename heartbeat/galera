@@ -329,8 +329,11 @@ check_sync_status()
     # TODO monitoring of the SST progress
     local state=$(get_status_variable "wsrep_local_state")
     ocf_log info "local node syncing"
-    [ "$state" == "4" ]
-    return $?
+    if [ "$state" == "4" ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 is_primary()
@@ -468,15 +471,13 @@ galera_start_local_node()
         # join without bootstrapping
         ocf_log info "Node <${NODENAME}> is joining the cluster"
         extra_opts="--wsrep-cluster-address=${OCF_RESKEY_wsrep_cluster_address}"
+    elif ocf_is_true $bootstrap; then
+        ocf_log info "Node <${NODENAME}> is bootstrapping the cluster"
+        extra_opts="--wsrep-cluster-address=gcomm://"
     else
-        if ocf_is_true $bootstrap; then
-            ocf_log info "Node <${NODENAME}> is bootstrapping the cluster"
-            extra_opts="--wsrep-cluster-address=gcomm://"
-        else
-            ocf_exit_reason "Failure, Attempted to join cluster of $OCF_RESOURCE_INSTANCE before master node has been detected."
-            clear_last_commit
-            return $OCF_ERR_GENERIC
-        fi
+        ocf_exit_reason "Failure, Attempted to join cluster of $OCF_RESOURCE_INSTANCE before master node has been detected."
+        clear_last_commit
+        return $OCF_ERR_GENERIC
     fi
 
     # clear last_commit before we start galera to make sure there
