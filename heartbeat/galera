@@ -649,6 +649,11 @@ galera_monitor()
         if [ -n "$last_commit" ];then
             rc=$OCF_SUCCESS
 
+            if ocf_is_probe; then
+                # prevent state change during probe
+                return $rc
+            fi
+
             master_exists
             if [ $? -ne 0 ]; then
                 # ocf_log info "--- DBG $LINENO -- $rc"
@@ -681,8 +686,13 @@ galera_monitor()
         check_sync_needed
         if [ $? -eq 0 ]; then
             # galera running and sync is needed: slave state
-            check_sync_status
-            rc=$?
+            if ocf_is_probe; then
+                # prevent state change during probe
+                rc=$OCF_SUCCESS
+            else
+                check_sync_status
+                rc=$?
+            fi
         else
             # galera running, no need to sync: master state and everything's clear
             rc=$OCF_RUNNING_MASTER
