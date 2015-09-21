@@ -328,11 +328,22 @@ check_sync_status()
 {
     # TODO monitoring of the SST progress
     local state=$(get_status_variable "wsrep_local_state")
-    ocf_log info "local node syncing"
-    if [ "$state" == "4" ]; then
-        return 0
+    local ready=$(get_status_variable "wsrep_ready")
+
+    if [ -z "$state" -o -z "$ready" ]; then
+        ocf_exit_reason "Unable to retrieve state transfer status, verify check_user '$OCF_RESKEY_check_user' has permissions to view status"
+        return $OCF_ERR_GENERIC
+    fi
+
+    if [ "$state" == "4" -a "$ready" == "ON" ]; then
+        ocf_log info "local node synced with the cluster"
+        # when sync is finished, we are ready to switch to Master
+        clear_sync_needed
+        set_master_score
+        return $OCF_SUCCESS
     else
-        return 1
+        ocf_log info "local node syncing"
+        return $OCF_SUCCESS
     fi
 }
 
@@ -555,6 +566,7 @@ galera_demote()
     # if this node was previously a bootstrap node, that is no longer the case.
     clear_bootstrap_node
     clear_last_commit
+    clear_sync_needed
 
     # record last commit by "starting" galera. start is just detection of the last sequence number
     galera_start
@@ -636,6 +648,7 @@ galera_monitor()
         last_commit=$(get_last_commit $NODENAME)
         if [ -n "$last_commit" ];then
             rc=$OCF_SUCCESS
+
             master_exists
             if [ $? -ne 0 ]; then
                 # ocf_log info "--- DBG $LINENO -- $rc"
@@ -668,14 +681,8 @@ galera_monitor()
         check_sync_needed
         if [ $? -eq 0 ]; then
             # galera running and sync is needed: slave state
-            # TODO add check for failing sync
             check_sync_status
-            if [ $? -eq 0 ]; then
-                # when sync is finished, we are ready to switch to Master
-                ocf_log info "local node synced with the cluster"
-                clear_sync_needed
-                set_master_score
-            fi
+            rc=$?
         else
             # galera running, no need to sync: master state and everything's clear
             rc=$OCF_RUNNING_MASTER
@@ -705,6 +712,7 @@ galera_stop()
     clear_last_commit
     clear_master_score
     clear_bootstrap_node
+    clear_sync_needed
     return $rc
 }
 
