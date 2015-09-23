@@ -543,14 +543,22 @@ galera_promote()
     master_exists
     if [ $? -ne 0 ]; then
         # promoting the first master will bootstrap the cluster
-        # TODO sanity checks
-        galera_start_local_node
-        return $rc
+        if is_bootstrap; then
+            galera_start_local_node
+            return $rc
+        else
+            ocf_exit_reason "Attempted to bootstrap the cluster while it was running."
+            return $OCF_ERR_GENERIC
+        fi
     else
         # promoting other masters only performs sanity checks
         # as the joining nodes were started during the "monitor" op
-        # TODO sanity checks
-        return $OCF_SUCCESS
+        if ! check_sync_needed; then
+            return $OCF_SUCCESS
+        else
+            ocf_exit_reason "Attempted to promote local node while sync was still needed."
+            return $OCF_ERR_GENERIC
+        fi
     fi
 }
 
