@@ -716,7 +716,7 @@ galera_stop()
     local rc
     # make sure the process is stopped
     mysql_common_stop
-    rc=$1
+    rc=$?
 
     clear_last_commit
     clear_master_score
