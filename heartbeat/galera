@@ -621,8 +621,7 @@ galera_start()
 
     master_exists
     if [ $? -eq 0 ]; then
-        ocf_log info "Master instances are already up, setting master score so this instance will join galera cluster."
-        set_master_score $NODENAME
+        ocf_log info "Master instances are already up, local node will join in when started"
     else
         clear_master_score
         detect_first_master
