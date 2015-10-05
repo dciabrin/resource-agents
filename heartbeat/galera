@@ -545,9 +545,10 @@ galera_promote()
         # promoting the first master will bootstrap the cluster
         if is_bootstrap; then
             galera_start_local_node
+            rc=$?
             return $rc
         else
-            ocf_exit_reason "Attempted to bootstrap the cluster while it was running."
+            ocf_exit_reason "Attempted to start the cluster without being a bootstrap node."
             return $OCF_ERR_GENERIC
         fi
     else
