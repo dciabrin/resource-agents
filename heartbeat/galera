@@ -32,7 +32,7 @@
 # Slave vs Master role:
 #
 # During the 'Slave' role, galera instances are in read-only mode and
-# will not attempt to connect to the cluster. This role exists only as
+# will not attempt to connect to the cluster. This role exists as
 # a means to determine which galera instance is the most up-to-date. The
 # most up-to-date node will be used to bootstrap a galera cluster that
 # has no current members.
@@ -40,9 +40,12 @@
 # The galera instances will only begin to be promoted to the Master role
 # once all the nodes in the 'wsrep_cluster_address' connection address
 # have entered read-only mode. At that point the node containing the
-# database that is most current will be promoted to Master. Once the first
-# Master instance bootstraps the galera cluster, the other nodes will be
-# promoted to Master as well.
+# database that is most current will be promoted to Master.
+#
+# Once the first Master instance bootstraps the galera cluster, the
+# other nodes will join the cluster and start synchronizing via SST.
+# They will stay in Slave role as long as the SST is running. Their
+# promotion to Master will happen once synchronization is finished.
 #
 # Example: Create a galera cluster using nodes rhel7-node1 rhel7-node2 rhel7-node3
 #
