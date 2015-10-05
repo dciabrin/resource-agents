@@ -326,7 +326,6 @@ check_sync_needed()
 
 check_sync_status()
 {
-    # TODO monitoring of the SST progress
     local state=$(get_status_variable "wsrep_local_state")
     local ready=$(get_status_variable "wsrep_ready")
 
@@ -412,16 +411,6 @@ set_master_score()
     else 
         $CRM_MASTER -N $node -v 100
     fi
-}
-
-# TODO can we trigger a monitor check to replace "promote_everyone"?
-promote_everyone()
-{
-
-    for node in $(echo "$OCF_RESKEY_wsrep_cluster_address" | sed 's/gcomm:\/\///g' | tr -d ' ' | tr -s ',' ' '); do
-
-        set_master_score $node
-    done
 }
 
 greater_than_equal_long()
@@ -664,7 +653,6 @@ galera_monitor()
 
             master_exists
             if [ $? -ne 0 ]; then
-                # ocf_log info "--- DBG $LINENO -- $rc"
                 detect_first_master
             else
                 # a master instance exists and is healthy.
@@ -674,10 +662,8 @@ galera_monitor()
                 rc=$?
             fi
         fi
-        # ocf_log info "--- DBG $LINENO -- $rc"
         return $rc
     elif [ $rc -ne $OCF_SUCCESS ]; then
-        # ocf_log info "--- DBG $LINENO -- $rc"
         return $rc
     fi
 
@@ -716,7 +702,6 @@ galera_monitor()
         rc=$OCF_ERR_GENERIC
     fi
 
-    # ocf_log info "--- DBG $LINENO -- $rc"
     return $rc
 }
 
