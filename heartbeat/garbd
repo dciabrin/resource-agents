@@ -349,9 +349,9 @@ garbd_validate()
 
     # Ensure that the encryption method is set if garbd is configured
     # to use SSL.
-    echo $$OCF_RESKEY_options | grep -s -q -i -E '\bsocket.ssl_(key|cert)='
+    echo $OCF_RESKEY_options | grep -s -q -i -E '\bsocket.ssl_(key|cert)='
     if [ $? -eq 0 ]; then
-        echo $$OCF_RESKEY_options | grep -s -q -i -E '\bsocket.ssl_cipher='
+        echo $OCF_RESKEY_options | grep -s -q -i -E '\bsocket.ssl_cipher='
         if [ $? -ne 0 ]; then
             ocf_exit_reason "option socket.ssl_cipher must be set if SSL is enabled."
             return $OCF_ERR_CONFIGURED
