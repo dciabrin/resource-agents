@@ -237,6 +237,8 @@ garbd_start()
         fi
         sleep 2
     done
+
+    ocf_log info "garbd connected to cluster \"${OCF_RESKEY_wsrep_cluster_name}\""
     return $OCF_SUCCESS
 }
 
@@ -289,6 +291,7 @@ garbd_monitor()
         pid=`cat $OCF_RESKEY_pid 2> /dev/null `
         netstat -tnp 2>/dev/null | grep -s -q "ESTABLISHED.*${pid}/"
         if [ $? -ne 0 ]; then
+            ocf_log err "garbd disconnected from cluster \"${OCF_RESKEY_wsrep_cluster_name}\""
             rc=$OCF_ERR_GENERIC
         fi
     fi
@@ -316,6 +319,7 @@ garbd_stop()
         return $OCF_ERR_GENERIC
     else
         rm -f $OCF_RESKEY_pid
+        ocf_log info "garbd stopped"
         return $OCF_SUCCESS
     fi
 }
