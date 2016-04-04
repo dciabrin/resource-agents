@@ -311,6 +311,8 @@ garbd_stop()
 
     pid=`cat $OCF_RESKEY_pid 2> /dev/null `
 
+    ocf_log info "stopping garbd"
+
     # make sure the process is stopped
     ocf_stop_processes TERM 10 $pid
     rc=$?
