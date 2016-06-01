@@ -227,7 +227,7 @@ garbd_start()
     # Let the CRM/LRM time us out if required.
     start_wait=1
     while [ $start_wait -eq 1 ]; do
-        garbd_monitor
+        garbd_monitor info
         rc=$?
         if [ $rc -eq $OCF_NOT_RUNNING ]; then
             ocf_exit_reason "garbd failed to start (pid=$pid), check logs in ${OCF_RESKEY_log}"
@@ -267,14 +267,14 @@ garbd_monitor()
 {
     local rc
     local pid
-    local status_loglevel="err"
+    local loglevel=$1
 
     # Set loglevel to info during probe
     if ocf_is_probe; then
-        status_loglevel="info"
+        loglevel="info"
     fi
 
-    garbd_status $status_loglevel
+    garbd_status $loglevel
     rc=$?
 
     # probe just wants to know if garbd is running or not
@@ -291,7 +291,7 @@ garbd_monitor()
         pid=`cat $OCF_RESKEY_pid 2> /dev/null `
         netstat -tnp 2>/dev/null | grep -s -q "ESTABLISHED.*${pid}/"
         if [ $? -ne 0 ]; then
-            ocf_log err "garbd disconnected from cluster \"${OCF_RESKEY_wsrep_cluster_name}\""
+            ocf_log $loglevel "garbd disconnected from cluster \"${OCF_RESKEY_wsrep_cluster_name}\""
             rc=$OCF_ERR_GENERIC
         fi
     fi
@@ -407,7 +407,7 @@ case "$1" in
   start)    garbd_start;;
   stop)     garbd_stop;;
   status)   garbd_status err;;
-  monitor)  garbd_monitor;;
+  monitor)  garbd_monitor err;;
   promote)  garbd_promote;;
   demote)   garbd_demote;;
   validate-all) exit $OCF_SUCCESS;;
