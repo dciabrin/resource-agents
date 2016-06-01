@@ -46,8 +46,8 @@
 # Use location constraints to avoid running galera and garbd on
 # the same node, e.g.:
 #
+#   pcs constraint colocation add garbd with galera-master -INFINITY
 #   pcs constraint location garbd prefers node3=INFINITY
-#   pcs constraint location galera-master avoids node3=INFINITY
 #
 ##
 
