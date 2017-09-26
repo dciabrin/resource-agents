@@ -1,0 +1,29 @@
+From 57807fdcd3edf4428e193d43033a56cd9542b150 Mon Sep 17 00:00:00 2001
+From: Peter Lemenkov <lemenkov@redhat.com>
+Date: Tue, 30 May 2017 13:43:19 +0200
+Subject: [PATCH] [rabbitmq] Typo fix
+
+Unfortunately we introduced a regression with commit
+1f57e26816d8148e0c77ff7573457b8d2599bf8b. This patch addresses it and
+fixes #982.
+
+Thanks @seabres for the heads up.
+
+Signed-off-by: Peter Lemenkov <lemenkov@redhat.com>
+---
+ heartbeat/rabbitmq-cluster | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/heartbeat/rabbitmq-cluster b/heartbeat/rabbitmq-cluster
+index b5060b155..30f032066 100755
+--- a/heartbeat/rabbitmq-cluster
++++ b/heartbeat/rabbitmq-cluster
+@@ -455,7 +455,7 @@ rmq_stop() {
+ 					{'EXIT', _} -> [];
+ 					Any -> Any
+ 				end,
+-				Result /= [] andalso file:write_file(Filename, io_lib:fwrite(\"~p.~n\", [RuntimeParams]))
++				Result /= [] andalso file:write_file(Filename, io_lib:fwrite(\"~p.~n\", [Result]))
+ 			end,
+ 
+ 			%% Backup users

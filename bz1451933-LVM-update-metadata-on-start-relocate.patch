@@ -1,0 +1,23 @@
+From 850ee793c5c575898528ab4bd6815431e963d22d Mon Sep 17 00:00:00 2001
+From: Oyvind Albrigtsen <oalbrigt@redhat.com>
+Date: Mon, 22 May 2017 15:01:16 +0200
+Subject: [PATCH] LVM: use vgscan --cache to update metadata during
+ start/relocate
+
+---
+ heartbeat/LVM | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/heartbeat/LVM b/heartbeat/LVM
+index 5b265f58f..583b9a2bd 100755
+--- a/heartbeat/LVM
++++ b/heartbeat/LVM
+@@ -431,7 +431,7 @@ LVM_start() {
+ 	if [ "$LVM_MAJOR" -eq "1" ]; then
+ 		ocf_run vgscan $vg
+ 	else
+-		ocf_run vgscan
++		ocf_run vgscan --cache
+ 	fi
+ 
+ 	case $(get_vg_mode) in

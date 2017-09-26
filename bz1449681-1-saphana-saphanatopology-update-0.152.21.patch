@@ -1,0 +1,216 @@
+diff -uNr a/heartbeat/SAPHana b/heartbeat/SAPHana
+--- a/heartbeat/SAPHana	2017-05-11 12:12:17.207213156 +0200
++++ b/heartbeat/SAPHana	2017-05-11 12:19:44.846798058 +0200
+@@ -16,7 +16,7 @@
+ # Support:      linux@sap.com
+ # License:      GNU General Public License (GPL)
+ # Copyright:    (c) 2013,2014 SUSE Linux Products GmbH
+-#               (c) 2015-2016 SUSE Linux GmbH
++#               (c) 2015-2017 SUSE Linux GmbH
+ #
+ # An example usage:
+ #      See usage() function below for more details...
+@@ -35,7 +35,7 @@
+ #######################################################################
+ #
+ # Initialization:
+-SAPHanaVersion="0.152.17"
++SAPHanaVersion="0.152.21"
+ timeB=$(date '+%s')
+ 
+ : ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+@@ -133,8 +133,8 @@
+ function backup_global_and_nameserver() {
+     super_ocf_log info "FLOW $FUNCNAME ($*)"
+     local rc=0
+-    cp /hana/shared/$SID/global/hdb/custom/config/global.ini /hana/shared/$SID/global/hdb/custom/config/global.ini.$(date +"%s")
+-    cp /hana/shared/$SID/global/hdb/custom/config/nameserver.ini /hana/shared/$SID/global/hdb/custom/config/nameserver.ini.$(date +"%s")
++    cp /hana/shared/${SID}/global/hdb/custom/config/global.ini /hana/shared/${SID}/global/hdb/custom/config/global.ini.$(date +"%s")
++    cp /hana/shared/${SID}/global/hdb/custom/config/nameserver.ini /hana/shared/${SID}/global/hdb/custom/config/nameserver.ini.$(date +"%s")
+     super_ocf_log info "FLOW $FUNCNAME rc=$rc"
+     return $rc
+ }
+@@ -665,7 +665,7 @@
+     # DONE: PRIO4: SAPVIRHOST might be different to NODENAME
+     # DONE: PRIO1: ASK: Is the output format of ListInstances fix? Could we take that as an API? Answer: Yes
+     # try to catch:  Inst Info : LNX - 42 - lv9041 - 740, patch 36, changelist 1444691
+-    # We rely on the following format: SID is word#4, SYSNR is work#6, vHost is word#8
++    # We rely on the following format: SID is word#4, SYSNR is word#6, vHost is word#8
+     if [ -e /usr/sap/hostctrl/exe/saphostctrl ]; then
+         vName=$(/usr/sap/hostctrl/exe/saphostctrl -function ListInstances \
+             | awk '$4 == SID && $6 == SYSNR { print $8 }' SID=$SID SYSNR=$InstanceNr 2>/dev/null )
+@@ -713,27 +713,29 @@
+        "[234]*:P:[^:]*:master .*     150"
+        "[015-9]*:P:[^:]*:master .*    90"
+        "[0-9]*:P:[^:]*:slave  .*      60"
+-       "[0-9]*:P:[^:]*:\?     .*       0"
+-       "[0-9]*:P:[^:]*:-      .*       0"
++       "[234]*:P:[^:]*:[?:-]  .*       0"
++       "[015-9]*:P:[^:]*:[?:-]  .*    -1"
+        "[234]*:S:[^:]*:master SOK    100"
++       "[234]*:S:[^:]*:master PRIM   100"
+        "[015-9]*:S:[^:]*:master SOK   80"
+        "[0-9]*:S:[^:]*:master SFAIL  -INFINITY"
+        "[0-9]*:S:[^:]*:slave  SOK     10"
+        "[0-9]*:S:[^:]*:slave  SFAIL  -INFINITY"
+-       "[0-9]*:S:[^:]*:\?     .*    0"
+-       "[0-9]*:S:[^:]*:-      .*    0"
+-       ".*                    .*   -1"
++       "[234]*:S:[^:]*:[?:-]  .*       0"
++       "[015-9]*:S:[^:]*:[?:-] .*     -1"
++       ".*                    .*      -1"
+     )
+     SCORING_TABLE_PREFERRED_LOCAL_RESTART=(
+-       "[0-9]*:P:[^:]*:master .*  150"
+-       "[0-9]*:P:[^:]*:.*     .*  140"
++       "[0-9]*:P:[^:]*:master .*     150"
++       "[0-9]*:P:[^:]*:.*     .*     140"
+        "[0-9]*:S:[^:]*:master SOK    100"
++       "[0-9]*:S:[^:]*:master PRIM   100"
+        "[0-9]*:S:[^:]*:master SFAIL  -INFINITY"
+        "[0-9]*:S:[^:]*:slave  SOK     10"
+        "[0-9]*:S:[^:]*:slave  SFAIL  -INFINITY"
+-       "[0-9]*:S:[^:]*:\?     .*    0"
+-       "[0-9]*:S:[^:]*:-      .*    0"
+-       ".*                    .*   -1"
++       "[015-9]*:S:[^:]*:[?:-]  .*    -1"
++       "[234]*:S:[^:]*:[?:-]    .*    -1"
++       ".*                      .*    -1"
+     )
+     SCORING_TABLE_PREFERRED_NEVER=(
+        "[234]*:P:[^:]*:master .*     150"
+@@ -1030,7 +1032,7 @@
+     # TODO: Limit the runtime of systemReplicationStatus.py
+     # SAP_CALL
+     # FULL_SR_STATUS=$(su - $sidadm -c "python $DIR_EXECUTABLE/python_support/systemReplicationStatus.py $siteParam" 2>/dev/null); srRc=$?
+-    FULL_SR_STATUS=$(HANA_CALL --timeout 60 --cmd "systemReplicationStatus.py" 2>/dev/null); srRc=$?
++    FULL_SR_STATUS=$(HANA_CALL --timeout 60 --cmd "systemReplicationStatus.py $siteParam" 2>/dev/null); srRc=$?
+     super_ocf_log info "DEC $FUNCNAME systemReplicationStatus.py (to site '$remSR_name')-> $srRc"
+     super_ocf_log info "FLOW $FUNCNAME systemReplicationStatus.py (to site '$remSR_name')-> $srRc"
+     #
+@@ -2445,8 +2447,9 @@
+      else
+         #
+         # neither MASTER nor SLAVE - This clone instance seams to be broken!!
+-        #
+-        rc=$OCF_ERR_GENERIC
++        # bsc#1027098 - do not stop SAP HANA if "only" HANA state is not correct
++        # Let next monitor find, if that HANA instance is available or not
++        rc=$OCF_SUCCESS;
+      fi
+   fi
+   rc=$?
+diff -uNr a/heartbeat/SAPHanaTopology b/heartbeat/SAPHanaTopology
+--- a/heartbeat/SAPHanaTopology	2017-05-11 12:12:17.205213176 +0200
++++ b/heartbeat/SAPHanaTopology	2017-05-11 12:12:40.642982012 +0200
+@@ -14,7 +14,7 @@
+ # Support:      linux@sap.com
+ # License:      GNU General Public License (GPL)
+ # Copyright:    (c) 2014 SUSE Linux Products GmbH
+-#               (c) 2015-2016 SUSE Linux GmbH
++#               (c) 2015-2017 SUSE Linux GmbH
+ #
+ # An example usage:
+ #      See usage() function below for more details...
+@@ -28,7 +28,7 @@
+ #######################################################################
+ #
+ # Initialization:
+-SAPHanaVersion="0.152.17"
++SAPHanaVersion="0.152.21"
+ timeB=$(date '+%s')
+ 
+ : ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+@@ -474,6 +474,7 @@
+     ATTR_NAME_HANA_SRMODE=("hana_${sid}_srmode" "forever")
+     ATTR_NAME_HANA_VHOST=("hana_${sid}_vhost" "forever")
+     ATTR_NAME_HANA_STATUS=("hana_${sid}_status" "reboot")
++    ATTR_NAME_HANA_VERSION=("hana_${sid}_version" "reboot")
+     #
+     # new "central" attributes
+     #
+@@ -531,7 +532,7 @@
+     # hdbnsutil was a bit unstable in some tests so we recall the tool, if it fails to report the srmode
+     for chkMethod in  hU hU hU gP ; do
+         # DONE: Limit the runtime of hdbnsutil.
+-        # TODO: Use getParameter.py if we get no answer
++        # DONE: Use getParameter.py if we get no answer
+         # SAP_CALL
+         #super_ocf_log debug "DBG2: hdbANSWER=$hdbANSWER"
+         #srmode=$(echo "$hdbANSWER" | awk -F= '/mode/ {print $2}')
+@@ -602,7 +603,18 @@
+             #       currently having more than 2 HANA in a chain/star members IN the cluster is not allowed, the third must be external
+             if [ "$NODENAME" != "$n1" ]; then
+                 hanaSite=$(get_hana_attribute ${n1} ${ATTR_NAME_HANA_SITE[@]})
+-                hanaRemoteHost="$n1"
++                #
++                # only, if a hanaSite is found use that node - this allows majority makers
++                #
++                if [ -n "$hanaSite" ]; then
++                    hanaRemoteHost=$(get_hana_attribute ${n1} ${ATTR_NAME_HANA_VHOST[@]})
++                    #
++                    # only if vhost is NOT set use the nodename instead
++                    #
++                    if [ -z "$hanaRemoteHost" ]; then
++                   hanaRemoteHost="$n1"
++                    fi
++                fi
+             fi
+         done
+         super_ocf_log info "DEC: site=$site, mode=$srmode, hanaRemoteHost=$hanaRemoteHost - found by remote site ($hanaSite)"
+@@ -700,7 +712,7 @@
+   # TODO: PRIO3: move the string "$HA_RSCTMP/SAPHana/SAPTopologyON" to a variable
+   # TODO: PRIO3: move the file to the clusters tmp directory?
+   mkdir -p $HA_RSCTMP/SAPHana
+-  touch $HA_RSCTMP/SAPHana/SAPTopologyON
++  touch $HA_RSCTMP/SAPHana/SAPTopologyON.${SID}
+   if ! check_saphostagent; then
+      start_saphostagent
+   fi
+@@ -722,7 +734,7 @@
+   local output=""
+   local rc=0
+ 
+-  rm $HA_RSCTMP/SAPHana/SAPTopologyON
++  rm $HA_RSCTMP/SAPHana/SAPTopologyON.${SID}
+   rc=$OCF_SUCCESS
+ 
+   super_ocf_log info "FLOW $FUNCNAME rc=$rc"
+@@ -740,7 +752,7 @@
+   super_ocf_log info "FLOW $FUNCNAME ($*)"
+   local rc=0
+ 
+-  if [ -f $HA_RSCTMP/SAPHana/SAPTopologyON ]; then
++  if [ -f $HA_RSCTMP/SAPHana/SAPTopologyON.${SID} ]; then
+      rc=$OCF_SUCCESS
+   else
+      rc=$OCF_NOT_RUNNING
+@@ -845,6 +857,11 @@
+ 	if ocf_is_probe; then
+ 		super_ocf_log debug "DBG2: PROBE ONLY"
+         sht_monitor; rc=$?
++        local hana_version=$(HANA_CALL --timeout 10 --cmd "HDB version" \
++            | awk -F':' '$1=="  version" {print $2}; ' | tr -d '[:space:]')
++        if [[ -n $hana_version ]]; then
++            set_hana_attribute "${NODENAME}" "$hana_version" ${ATTR_NAME_HANA_VERSION[@]}
++        fi
+ 	else
+ 		super_ocf_log debug "DBG2: REGULAR MONITOR"
+         if ! check_saphostagent; then
+@@ -871,9 +888,13 @@
+             super_ocf_log debug "DBG2: HANA IS STANDALONE"
+             sht_monitor; rc=$?
+         else
+-            hanaPrim="-"
+-            super_ocf_log warn "ACT: sht_monitor_clone: HANA_STATE_DEFECT"
+-            rc=$OCF_ERR_CONFIGURED
++            # bsc#1027098 Do not mark HANA instance as failed, if "only" the HANA state could not be detected
++            hanaPrim=$(get_hana_attribute ${NODENAME} ${ATTR_NAME_HANA_ROLES[@]} | awk -F: '{ print $2}')
++            if [ "$hanaPrim" = "" ]; then
++                hanaPrim="-"
++            fi
++            super_ocf_log warn "ACT: sht_monitor_clone: HANA_STATE_DEFECT (primary/secondary state could not be detected at this point of time)"
++            sht_monitor; rc=$?
+         fi
+     fi
+     # DONE: PRIO1: ASK: Is the output format of ListInstances fix? Could we take that as an API?

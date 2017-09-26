@@ -1,0 +1,146 @@
+From 9bd94137d77f770967d35db5de716590cfaf0435 Mon Sep 17 00:00:00 2001
+From: Michele Baldessari <michele@acksyn.org>
+Date: Thu, 7 Sep 2017 21:07:45 +0200
+Subject: [PATCH 2/2] Make use of ocf_attribute_target in rabbitmq/redis/galera
+
+Instead of using NODENAME directly use the newly-introduced
+ocf_attribute_target function. This allows the operator to decide if an RA
+running inside a bundle should use per-host properties or per-bundle
+properties in a resource. This can be done by setting the meta-attribute
+'container-attribute-target' to 'host' in the former case and leave the
+defaults as is in the latter case.
+
+This change has been tested in the following scenarios (for rabbit/redis
+and galera):
+1) A deployment without bundles and without the container-attribute-target meta attr set.
+2) A deployment with the resources running in bundles without the meta-attr set
+3) A deployment with the resources running in bundles with the meta-attr set to 'host'
+
+Additionally we successfully tested restarting of each resource, banning
+of each resource from a node and rebooting a cluster node hosting the
+resource.
+
+Signed-off-by: Andrew Beekhof <abeekhof@redhat.com>
+Signed-off-by: Michele Baldessari <michele@acksyn.org>
+Signed-off-by: Damien Ciabrini <dciabrin@redhat.com>
+---
+ heartbeat/galera           | 16 +++++++++-------
+ heartbeat/rabbitmq-cluster |  4 ++--
+ heartbeat/redis            |  5 +++--
+ 3 files changed, 14 insertions(+), 11 deletions(-)
+
+diff --git a/heartbeat/galera b/heartbeat/galera
+index dc681a47079a..ab121a4be5a4 100755
+--- a/heartbeat/galera
++++ b/heartbeat/galera
+@@ -68,6 +68,8 @@
+ . ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
+ . ${OCF_FUNCTIONS_DIR}/mysql-common.sh
+ 
++NODENAME=$(ocf_attribute_target)
++
+ # It is common for some galera instances to store
+ # check user that can be used to query status
+ # in this file
+@@ -279,7 +281,7 @@ get_status_variable()
+ 
+ set_bootstrap_node()
+ {
+-    local node=$1
++    local node=$(ocf_attribute_target $1)
+ 
+     ${HA_SBIN_DIR}/crm_attribute -N $node -l reboot --name "${INSTANCE_ATTR_NAME}-bootstrap" -v "true"
+ }
+@@ -307,7 +309,7 @@ clear_no_grastate()
+ 
+ is_no_grastate()
+ {
+-    local node=$1
++    local node=$(ocf_attribute_target $1)
+     ${HA_SBIN_DIR}/crm_attribute -N $node -l reboot --name "${INSTANCE_ATTR_NAME}-no-grastate" -Q 2>/dev/null
+ }
+ 
+@@ -323,7 +325,7 @@ set_last_commit()
+ 
+ get_last_commit()
+ {
+-    local node=$1
++    local node=$(ocf_attribute_target $1)
+ 
+     if [ -z "$node" ]; then
+        ${HA_SBIN_DIR}/crm_attribute -N $NODENAME -l reboot --name "${INSTANCE_ATTR_NAME}-last-committed" -Q 2>/dev/null
+@@ -413,7 +415,7 @@ master_exists()
+ 
+ clear_master_score()
+ {
+-    local node=$1
++    local node=$(ocf_attribute_target $1)
+     if [ -z "$node" ]; then
+         $CRM_MASTER -D
+     else 
+@@ -423,7 +425,7 @@ clear_master_score()
+ 
+ set_master_score()
+ {
+-    local node=$1
++    local node=$(ocf_attribute_target $1)
+ 
+     if [ -z "$node" ]; then
+         $CRM_MASTER -v 100
+@@ -542,7 +544,7 @@ detect_first_master()
+ 
+         greater_than_equal_long "$last_commit" "$best_commit"
+         if [ $? -eq 0 ]; then
+-            best_node=$node
++            best_node=$(ocf_attribute_target $node)
+             best_commit=$last_commit
+         fi
+ 
+diff --git a/heartbeat/rabbitmq-cluster b/heartbeat/rabbitmq-cluster
+index 1e78d9ecab98..362556d3f644 100755
+--- a/heartbeat/rabbitmq-cluster
++++ b/heartbeat/rabbitmq-cluster
+@@ -37,7 +37,7 @@ RMQ_DATA_DIR="/var/lib/rabbitmq/mnesia"
+ RMQ_PID_DIR="/var/run/rabbitmq"
+ RMQ_PID_FILE="/var/run/rabbitmq/rmq.pid"
+ RMQ_LOG_DIR="/var/log/rabbitmq"
+-NODENAME=$(ocf_local_nodename)
++NODENAME=$(ocf_attribute_target)
+ 
+ # this attr represents the current active local rmq node name.
+ # when rmq stops or the node is fenced, this attr disappears
+@@ -340,7 +340,7 @@ rmq_notify() {
+ 
+ 	# forget each stopped rmq instance in the provided pcmk node in the list.
+ 	for node in $(echo "$node_list"); do
+-		local rmq_node="$(${HA_SBIN_DIR}/crm_attribute -N $node -l forever --query --name $RMQ_CRM_ATTR_COOKIE_LAST_KNOWN -q)"
++		local rmq_node="$(${HA_SBIN_DIR}/crm_attribute -N $(ocf_attribute_target $node) -l forever --query --name $RMQ_CRM_ATTR_COOKIE_LAST_KNOWN -q)"
+ 		if [ -z "$rmq_node" ]; then
+ 			ocf_log warn "Unable to map pcmk node $node to a known rmq node."
+ 			continue	
+diff --git a/heartbeat/redis b/heartbeat/redis
+index 708ce84e6184..bc97f14096a6 100755
+--- a/heartbeat/redis
++++ b/heartbeat/redis
+@@ -188,7 +188,8 @@ function last_known_master()
+ }
+ 
+ function crm_master_reboot() {
+-	"${HA_SBIN_DIR}/crm_master" -l reboot "$@"
++	local node=$(ocf_attribute_target)
++	"${HA_SBIN_DIR}/crm_master" -N $node -l reboot "$@"
+ }
+ 
+ function calculate_score()
+@@ -545,7 +546,7 @@ function validate() {
+ 	fi
+ }
+ 
+-NODENAME=$(ocf_local_nodename)
++NODENAME=$(ocf_attribute_target)
+ if [ -f "$REDIS_CONFIG" ]; then
+ 	clientpasswd="$(cat $REDIS_CONFIG | sed -n -e  's/^\s*requirepass\s*\(.*\)\s*$/\1/p' | tail -n 1)"
+ fi
+-- 
+2.13.5
+

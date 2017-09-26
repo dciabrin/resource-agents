@@ -48,7 +48,7 @@
 Name:		resource-agents
 Summary:	Open Source HA Reusable Cluster Resource Scripts
 Version:	3.9.5
-Release:	100%{?dist}
+Release:	105%{?dist}.0.0.rdo1
 License:	GPLv2+, LGPLv2+ and ASL 2.0
 URL:		https://github.com/ClusterLabs/resource-agents
 %if 0%{?fedora} || 0%{?centos_version} || 0%{?rhel}
@@ -224,11 +224,19 @@ Patch163:	bz1427574-DB2-fix-HADR-DB2-V98-or-later.patch
 Patch164:	bz1342376-rabbitmq-cluster-backup-and-restore-users-policies.patch
 Patch165:	bz1445861-IPaddr2-IPv6-add-preferred_lft-parameter.patch
 Patch166:	bz1316130-systemd-drop-in-clvmd-LVM.patch
-Patch167:	bz1449681-saphana-saphanatopology-update-0.152.21.patch
+Patch167:	bz1449681-1-saphana-saphanatopology-update-0.152.21.patch
 Patch168:	bz1451097-1-galera-fix-bootstrap-when-cluster-has-no-data.patch
 Patch169:	bz1451097-2-galera-fix-bootstrap-when-cluster-has-no-data.patch
 Patch170:	bz1451097-3-galera-fix-bootstrap-when-cluster-has-no-data.patch
 Patch171:	bz1452049-docker-create-directories.patch
+Patch172:	bz1454699-LVM-status-check-for-missing-VG.patch
+Patch173:	bz1451933-LVM-update-metadata-on-start-relocate.patch
+Patch174:	bz1451933-LVM-warn-when-cache-mode-not-writethrough.patch
+Patch175:	bz1449681-2-saphana-saphanatopology-update-0.152.21.patch
+Patch176:	bz1342376-2-rabbitmq-cluster-backup-and-restore-users-policies.patch
+Patch177:	bz1342376-3-rabbitmq-cluster-backup-and-restore-users-policies.patch
+Patch178:	bz1493915-1-support-per-host-per-bundle-attribs.patch
+Patch179:	bz1493915-2-support-per-host-per-bundle-attribs.patch
 
 Obsoletes:	heartbeat-resources <= %{version}
 Provides:	heartbeat-resources = %{version}
@@ -515,6 +523,14 @@ exit 1
 %patch169 -p1
 %patch170 -p1
 %patch171 -p1
+%patch172 -p1
+%patch173 -p1
+%patch174 -p1
+%patch175 -p1
+%patch176 -p1
+%patch177 -p1
+%patch178 -p1
+%patch179 -p1 -F2
 
 %build
 if [ ! -f configure ]; then
@@ -778,6 +794,32 @@ ccs_update_schema > /dev/null 2>&1 ||:
 %endif
 
 %changelog
+* Thu Sep 21 2017 Oyvind Albrigtsen <oalbrigt@redhat.com> - 3.9.5-105.1
+- support per-host and per-bundle attributes
+
+  Resolves: rhbz#1493915
+
+* Fri Jun 23 2017 Oyvind Albrigtsen <oalbrigt@redhat.com> - 3.9.5-105
+- rabbitmq-cluster: fix to keep expiration policy
+
+  Resolves: rhbz#1342376
+
+* Fri Jun  2 2017 Oyvind Albrigtsen <oalbrigt@redhat.com> - 3.9.5-104
+- SAPHana/SAPHanaTopology: update to version 0.152.21
+
+  Resolves: rhbz#1449681
+
+* Wed May 31 2017 Oyvind Albrigtsen <oalbrigt@redhat.com> - 3.9.5-102
+- LVM: update metadata on start/relocate
+- LVM: warn when cache mode is not writethrough
+
+  Resolves: rhbz#1451933
+
+* Tue May 30 2017 Oyvind Albrigtsen <oalbrigt@redhat.com> - 3.9.5-101
+- LVM: status check for missing VG
+
+  Resolves: rhbz#1454699
+
 * Mon May 22 2017 Oyvind Albrigtsen <oalbrigt@redhat.com> - 3.9.5-100
 - docker: add "mount_points" parameter to be able to create directories
 
@@ -787,11 +829,6 @@ ccs_update_schema > /dev/null 2>&1 ||:
 - galera: fix bootstrap when cluster has no data
 
   Resolves: rhbz#1451097
-
-* Thu May 11 2017 Oyvind Albrigtsen <oalbrigt@redhat.com> - 3.9.5-98
-- SAPHana/SAPHanaTopology: update to version 0.152.21
-
-  Resolves: rhbz#1449681
 
 * Wed May  3 2017 Oyvind Albrigtsen <oalbrigt@redhat.com> - 3.9.5-97
 - systemd: add drop-in for clvmd and LVM to avoid fencing on shutdown
@@ -805,10 +842,8 @@ ccs_update_schema > /dev/null 2>&1 ||:
 
 * Fri Apr  7 2017 Oyvind Albrigtsen <oalbrigt@redhat.com> - 3.9.5-95
 - DB2: fix HADR for DB2 V98 or later
-- rabbitmq-cluster: fix to keep expiration policy
 
   Resolves: rhbz#1427574
-  Resolves: rhbz#1342376
 
 * Tue Apr  4 2017 Oyvind Albrigtsen <oalbrigt@redhat.com> - 3.9.5-94
 - send_arp: update usage info
@@ -843,14 +878,12 @@ ccs_update_schema > /dev/null 2>&1 ||:
   Resolves: rhbz#1393189
 
 * Thu Mar  9 2017 Oyvind Albrigtsen <oalbrigt@redhat.com> - 3.9.5-88
-- LVM: add "check_writethrough" parameter for dmcache
 - clvm: remove reload action
 - iSCSILogicalUnit: add IPv6-support
 - IPsrcaddr: fix issue with duplicate routes
 - pgsql: don't use crm_failcount
 - ocf_log: use same log format as Pacemaker
 
-  Resolves: rhbz#1159328
   Resolves: rhbz#1359252
   Resolves: rhbz#1389300
   Resolves: rhbz#1400172

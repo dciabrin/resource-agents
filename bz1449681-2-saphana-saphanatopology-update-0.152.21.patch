@@ -1,0 +1,48 @@
+diff -uNr a/heartbeat/SAPHana b/heartbeat/SAPHana
+--- a/heartbeat/SAPHana	2017-06-02 11:44:30.345894798 +0200
++++ b/heartbeat/SAPHana	2017-06-02 11:45:15.622450739 +0200
+@@ -545,6 +545,9 @@
+             read rolePatt syncPatt score <<< $scan
+             if grep "$rolePatt" <<< "$roles"; then
+                if grep "$syncPatt" <<< "$sync"; then
++                  super_ocf_log info "SCORE: scoring_crm_master: roles($roles) are matching pattern ($rolePatt)"
++                  super_ocf_log info "SCORE: scoring_crm_master: sync($sync) is  matching syncPattern ($syncPatt)"
++                  super_ocf_log info "SCORE: scoring_crm_master: set score $score"
+                   skip=1
+                   myScore=$score
+                fi
+@@ -1435,6 +1438,10 @@
+                     lpa_set_lpt $LPTloc $NODENAME
+                     ;;
+             esac
++            if [ -z "$my_role" ]; then
++                my_role=$(get_hana_attribute ${NODENAME} ${ATTR_NAME_HANA_ROLES[@]})
++            fi
++            super_ocf_log info "SCORE: saphana_start_primary: scoring_crm_master($my_role,$my_sync)" 
+             scoring_crm_master "$my_role" "$my_sync"
+             ;;
+         register ) # process a REGISTER
+@@ -2129,6 +2136,7 @@
+                         #super_ocf_log info "DEC: PreferSiteTakeover selected so decrease promotion score here"
+                         my_role=$(get_hana_attribute ${NODENAME} ${ATTR_NAME_HANA_ROLES[@]})
+                         my_sync=$(get_hana_attribute ${NODENAME} ${ATTR_NAME_HANA_SYNC_STATUS[@]})
++                        super_ocf_log info "SCORE: saphana_monitor_primary: scoring_crm_master($my_role,$my_sync)" 
+                         scoring_crm_master "$my_role" "$my_sync"
+                         rc=$OCF_FAILED_MASTER
+                     fi
+@@ -2191,6 +2199,7 @@
+                           ;;
+                    esac
+                 fi
++                super_ocf_log info "SCORE: saphana_monitor_primary: scoring_crm_master($my_role,$my_sync)" 
+                 scoring_crm_master "$my_role" "$my_sync"
+             fi
+             ;;
+@@ -2301,6 +2310,7 @@
+                     super_ocf_log info "DEC: secondary with sync status SOK ==> possible takeover node"
+                     my_role=$(get_hana_attribute ${NODENAME} ${ATTR_NAME_HANA_ROLES[@]})
+                     my_sync=$(get_hana_attribute ${NODENAME} ${ATTR_NAME_HANA_SYNC_STATUS[@]})
++                    super_ocf_log info "SCORE: saphana_monitor_secondary: scoring_crm_master($my_role,$my_sync)" 
+                     scoring_crm_master "$my_role" "$my_sync"
+                     ;;
+                 "SFAIL" ) # This is currently NOT a possible node to promote

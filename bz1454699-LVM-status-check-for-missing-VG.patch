@@ -1,0 +1,32 @@
+From e587a7dbc17c24de14098a1b56b6de48ded9d8ba Mon Sep 17 00:00:00 2001
+From: Oyvind Albrigtsen <oalbrigt@redhat.com>
+Date: Wed, 24 May 2017 13:03:47 +0200
+Subject: [PATCH] LVM: status check for missing VG
+
+---
+ heartbeat/LVM | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/heartbeat/LVM b/heartbeat/LVM
+index 5b265f58f..0e5b14d72 100755
+--- a/heartbeat/LVM
++++ b/heartbeat/LVM
+@@ -320,6 +320,18 @@ LVM_status() {
+ 			fi
+ 		fi
+ 	fi
++
++	# Check if VG is still available (e.g. for multipath where the device
++	# doesn't disappear)
++	if [ "$LVM_MAJOR" -eq "1" ]; then
++		output=$(vgscan $vg 2>&1)
++	else
++		output=$(vgscan --cache 2>&1)
++	fi
++	if ! echo "$output" | grep -q "Found.*\"$1\""; then
++		ocf_exit_reason "LVM Volume $1 is not available"
++		return $OCF_ERR_GENERIC
++	fi
+ 	
+ 	if [ -d /dev/$1 ]; then
+ 		test "`cd /dev/$1 && ls`" != ""

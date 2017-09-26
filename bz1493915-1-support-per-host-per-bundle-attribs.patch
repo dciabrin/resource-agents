@@ -1,0 +1,94 @@
+From 708e11c13ac25e1db5a4552db699a652f4e32353 Mon Sep 17 00:00:00 2001
+From: Michele Baldessari <michele@acksyn.org>
+Date: Thu, 7 Sep 2017 18:56:24 +0200
+Subject: [PATCH 1/2] Introduce helper functions for container-attribute-target
+
+In this change we introduce the ocf_attribute_target() function that helps
+RAs decide where to store per-node attributes. The rationale is that
+when an OCF resource runs in a bundle (e.g. rabbitmq-bundle-0) the
+NODENAME will point to the bundle name and not to the physical node
+running the bundle. Since a bundle can run on any cluster node, this
+is not ideal in the situations in which an RA wants to remember on which
+*host* a bundle was running (this is typically the case when there is no
+shared storage)
+
+The way this new ocf_attribute_target() function works is the following:
+A) When the meta-attr 'container-attribute-target' == 'host' and the
+   function is called without arguments it will return the physical
+   hostname the resource is running on.
+B) When the meta-attr 'container-attribute-target' != 'host' and the
+   function is called without arguments it will return the NODENAME
+   (default)
+C) When the meta-attr 'container-attribute-target' == 'host' and the
+   function is called with an argument it will return the physical
+   hostname on which the corresponding argument is running on.
+D) When the meta-attr 'container-attribute-target' != 'host' and the
+   function is called with an argument it will return the NODENAME
+   (default)
+
+The basic idea is that if resources need to store per-host attributes
+you will set the meta attribute 'container-attribute-target' equal to
+host (the no-shared storage case). If resources need to store attributes
+on a per-bundle basis (because they access data from shared-storage)
+then no change is needed on meta attributes (this is the default
+behaviour).
+
+Signed-off-by: Andrew Beekhof <abeekhof@redhat.com>
+Tested-by: Michele Baldessari <michele@acksyn.org>
+Tested-by: Damien Ciabrini <dciabrin@redhat.com>
+---
+ heartbeat/ocf-shellfuncs.in | 38 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 38 insertions(+)
+
+diff --git a/heartbeat/ocf-shellfuncs.in b/heartbeat/ocf-shellfuncs.in
+index 9b6b99f88a56..ddd6854e9487 100644
+--- a/heartbeat/ocf-shellfuncs.in
++++ b/heartbeat/ocf-shellfuncs.in
+@@ -989,6 +989,44 @@ ocf_stop_trace() {
+ 	set +x
+ }
+ 
++# Helper functions to map from nodename/bundle-name and physical hostname
++# list_index_for_word "node0 node1 node2 node3 node4 node5" node4 --> 5
++# list_word_at_index "NA host1 host2 host3 host4 host5" 3      --> host2
++
++# list_index_for_word "node1 node2 node3 node4 node5" node7 --> ""
++# list_word_at_index "host1 host2 host3 host4 host5" 8      --> ""
++
++# attribute_target node1                                    --> host1
++list_index_for_word() {
++	echo $1 | tr ' ' '\n' | awk -v x="$2" '$0~x {print NR}'
++}
++
++list_word_at_index() {
++	echo $1 | tr ' ' '\n' | awk -v n="$2" 'n == NR'
++}
++
++ocf_attribute_target() {
++	if [ x$1 = x ]; then
++		if [ x$OCF_RESKEY_CRM_meta_container_attribute_target = xhost -a x$OCF_RESKEY_CRM_meta_physical_host != x ]; then
++			echo $OCF_RESKEY_CRM_meta_physical_host
++		else
++			echo $OCF_RESKEY_CRM_meta_on_node
++		fi
++		return
++	elif [ x"$OCF_RESKEY_CRM_meta_notify_all_uname" != x ]; then
++		index=$(list_index_for_word "$OCF_RESKEY_CRM_meta_notify_all_uname" $1)
++		mapping=""
++		if [ x$index != x ]; then
++			mapping=$(list_word_at_index "$OCF_RESKEY_CRM_meta_notify_all_hosts" $index)
++		fi
++		if [ x$mapping != x -a x$mapping != xNA ]; then
++			echo $mapping
++			return
++		fi
++	fi
++	echo $1
++}
++
+ __ocf_set_defaults "$@"
+ 
+ : ${OCF_TRACE_RA:=$OCF_RESKEY_trace_ra}
+-- 
+2.13.5
+

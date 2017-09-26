@@ -1,0 +1,24 @@
+From a045342ebe8523d1408afb87b062bb7d71927c46 Mon Sep 17 00:00:00 2001
+From: Dave Holland <dave@biff.org.uk>
+Date: Thu, 8 Jun 2017 14:38:15 +0100
+Subject: [PATCH] rabbitmq-cluster: typo fix
+
+fix a small typo which causes errors in corosync.log e.g.
+Jun 08 09:00:14 [6504] overcloud-controller-1.localdomain       lrmd:   notice: operation_finished:     rabbitmq_start_0:7504:stderr [ Error: syntax error before: ')' ]
+---
+ heartbeat/rabbitmq-cluster | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/heartbeat/rabbitmq-cluster b/heartbeat/rabbitmq-cluster
+index 30f032066..1e78d9eca 100755
+--- a/heartbeat/rabbitmq-cluster
++++ b/heartbeat/rabbitmq-cluster
+@@ -398,7 +398,7 @@ rmq_start() {
+ 				case file:consult(Filename) of
+ 					{error, _} ->
+ 						ok;
+-					{ok, [Result]) ->
++					{ok, [Result]} ->
+ 						lists:foreach(fun(X) -> mnesia:dirty_write(Table, PostprocessFun(X)) end, Result),
+ 						file:delete(Filename)
+ 				end

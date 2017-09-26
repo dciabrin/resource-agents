@@ -1,0 +1,59 @@
+From 30ac299da6a01a2f5f42fac6b3d35275ddc001e7 Mon Sep 17 00:00:00 2001
+From: Oyvind Albrigtsen <oalbrigt@redhat.com>
+Date: Mon, 29 May 2017 14:38:48 +0200
+Subject: [PATCH] LVM: warn when cache mode is not writethrough
+
+---
+ heartbeat/LVM | 17 ++---------------
+ 1 file changed, 2 insertions(+), 15 deletions(-)
+
+diff --git a/heartbeat/LVM b/heartbeat/LVM
+index 583b9a2bd..7ebedac6f 100755
+--- a/heartbeat/LVM
++++ b/heartbeat/LVM
+@@ -29,8 +29,6 @@
+ : ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+ . ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
+ 
+-OCF_RESKEY_check_writethrough_default="false"
+-
+ #######################################################################
+ 
+ 
+@@ -108,14 +106,6 @@ logical volumes.
+ <content type="string" default="false" />
+ </parameter>
+ 
+-<parameter name="check_writethrough" unique="0" required="0">
+-<longdesc lang="en">
+-If set to true, check if cache_mode is set to writethrough.
+-</longdesc>
+-<shortdesc lang="en">Check if cache_mode is set to writethrough</shortdesc>
+-<content type="string" default="${OCF_RESKEY_check_writethrough_default}" />
+-</parameter>
+-
+ </parameters>
+ 
+ <actions>
+@@ -593,10 +583,9 @@ LVM_validate_all() {
+ 		exit $OCF_ERR_GENERIC
+ 	fi
+ 
+-	if ocf_is_true "$OCF_RESKEY_check_writethrough"; then
++	if lvs --noheadings -o segtype | grep -q "cache"; then
+ 		if ! lvs --noheadings -o cache_mode "$OCF_RESKEY_volgrpname" | grep -q "writethrough"; then
+-			ocf_exit_reason "LVM cache is not in writethrough mode."
+-			exit $OCF_ERR_CONFIGURED
++			ocf_log warn "LVM CACHE IS NOT IN WRITETHROUGH MODE. THIS IS NOT A SUPPORTED CONFIGURATION."
+ 		fi
+ 	fi
+ 
+@@ -707,8 +696,6 @@ if [ -n "$OCF_RESKEY_tag" ]; then
+ 	OUR_TAG=$OCF_RESKEY_tag
+ fi
+ 
+-: ${OCF_RESKEY_check_writethrough=${OCF_RESKEY_check_writethrough_default}}
+-
+ # What kind of method was invoked?
+ case "$1" in
+ 
